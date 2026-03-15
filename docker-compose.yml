@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: flashmind-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-flashmind}
+      POSTGRES_USER: ${POSTGRES_USER:-flashmind}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-flashmind}
+    ports:
+      - "5432:5432"
+    volumes:
+      - flashmind-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  flashmind-postgres-data:

@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/flashmind
+    username: your-db-user
+    password: your-db-password
+
+flashmind:
+  jwt:
+    secret: replace-with-a-long-random-secret
+  auth:
+    allow-dev-login-bypass: false
+    dev-bypass-email: demo@flashmind.local
+    dev-bypass-display-name: Demo User
+  social:
+    skip-id-token-validation: false
+    google-client-id: replace-me
+    apple-client-id: replace-me
+    apple-team-id: replace-me
+    apple-key-id: replace-me
+  generation:
+    ai-provider: openai
+    openai-api-key: replace-me
+    openai-model: gpt-4.1-mini
+    openai-base-url: https://api.openai.com

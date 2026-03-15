@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: flashmind-backend
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/flashmind}
+    username: ${DB_USERNAME:flashmind}
+    password: ${DB_PASSWORD:flashmind}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+flashmind:
+  jwt:
+    secret: ${JWT_SECRET:replace-with-a-long-secret-for-local-use-only-1234567890}
+    expiration-hours: 24
+  auth:
+    allow-dev-login-bypass: false
+    dev-bypass-email: ${DEV_BYPASS_EMAIL:demo@flashmind.local}
+    dev-bypass-display-name: ${DEV_BYPASS_DISPLAY_NAME:Demo User}
+  social:
+    skip-id-token-validation: false
+    google-client-id: ${GOOGLE_CLIENT_ID:replace-me}
+    apple-client-id: ${APPLE_CLIENT_ID:replace-me}
+    apple-team-id: ${APPLE_TEAM_ID:replace-me}
+    apple-key-id: ${APPLE_KEY_ID:replace-me}
+  document:
+    max-file-size-bytes: 10485760
+    max-pdf-pages: 60
+    max-pptx-slides: 80
+    max-docx-paragraphs: 500
+    max-extracted-text-length: 16000
+  generation:
+    max-card-count: 20
+    default-card-count: 10
+    ai-provider: openai
+    openai-api-key: ${OPENAI_API_KEY:}
+    openai-model: ${OPENAI_MODEL:gpt-4.1-mini}
+    openai-base-url: ${OPENAI_BASE_URL:https://api.openai.com}

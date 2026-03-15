@@ -1,0 +1,14 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+  jpa:
+    show-sql: true
+
+flashmind:
+  auth:
+    allow-dev-login-bypass: true
+  social:
+    skip-id-token-validation: true
+  generation:
+    ai-provider: mock
