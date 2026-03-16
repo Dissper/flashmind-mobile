@@ -22,7 +22,12 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/social-login", "/api/auth/dev-login", "/error").permitAll()
+                        .requestMatchers(
+                                "/api/auth/social-login",
+                                "/api/auth/dev-login",
+                                "/api/subscriptions/revenuecat/webhook",
+                                "/error"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

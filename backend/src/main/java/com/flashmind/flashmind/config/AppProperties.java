@@ -10,6 +10,7 @@ public class AppProperties {
     private final Social social = new Social();
     private final Document document = new Document();
     private final Generation generation = new Generation();
+    private final Subscription subscription = new Subscription();
 
     public Jwt getJwt() {
         return jwt;
@@ -29,6 +30,10 @@ public class AppProperties {
 
     public Generation getGeneration() {
         return generation;
+    }
+
+    public Subscription getSubscription() {
+        return subscription;
     }
 
     public static class Auth {
@@ -183,7 +188,8 @@ public class AppProperties {
         private int defaultCardCount = 10;
         private String aiProvider = "openai";
         private String openaiApiKey = "";
-        private String openaiModel = "gpt-4.1-mini";
+        private String openaiFreeModel = "gpt-4.1";
+        private String openaiPremiumModel = "gpt-5.4";
         private String openaiBaseUrl = "https://api.openai.com";
 
         public int getMaxCardCount() {
@@ -218,12 +224,20 @@ public class AppProperties {
             this.openaiApiKey = openaiApiKey;
         }
 
-        public String getOpenaiModel() {
-            return openaiModel;
+        public String getOpenaiFreeModel() {
+            return openaiFreeModel;
         }
 
-        public void setOpenaiModel(String openaiModel) {
-            this.openaiModel = openaiModel;
+        public void setOpenaiFreeModel(String openaiFreeModel) {
+            this.openaiFreeModel = openaiFreeModel;
+        }
+
+        public String getOpenaiPremiumModel() {
+            return openaiPremiumModel;
+        }
+
+        public void setOpenaiPremiumModel(String openaiPremiumModel) {
+            this.openaiPremiumModel = openaiPremiumModel;
         }
 
         public String getOpenaiBaseUrl() {
@@ -232,6 +246,72 @@ public class AppProperties {
 
         public void setOpenaiBaseUrl(String openaiBaseUrl) {
             this.openaiBaseUrl = openaiBaseUrl;
+        }
+    }
+
+    public static class Subscription {
+        private int freeGenerationLimit = 3;
+        private int freeMaxCards = 10;
+        private int premiumMaxCards = 20;
+        private String entitlementName = "premium";
+        private String productId = "replace-me";
+        private String revenuecatApiKey = "";
+        private String webhookSecret = "";
+
+        public int getFreeGenerationLimit() {
+            return freeGenerationLimit;
+        }
+
+        public void setFreeGenerationLimit(int freeGenerationLimit) {
+            this.freeGenerationLimit = freeGenerationLimit;
+        }
+
+        public int getFreeMaxCards() {
+            return freeMaxCards;
+        }
+
+        public void setFreeMaxCards(int freeMaxCards) {
+            this.freeMaxCards = freeMaxCards;
+        }
+
+        public int getPremiumMaxCards() {
+            return premiumMaxCards;
+        }
+
+        public void setPremiumMaxCards(int premiumMaxCards) {
+            this.premiumMaxCards = premiumMaxCards;
+        }
+
+        public String getEntitlementName() {
+            return entitlementName;
+        }
+
+        public void setEntitlementName(String entitlementName) {
+            this.entitlementName = entitlementName;
+        }
+
+        public String getProductId() {
+            return productId;
+        }
+
+        public void setProductId(String productId) {
+            this.productId = productId;
+        }
+
+        public String getRevenuecatApiKey() {
+            return revenuecatApiKey;
+        }
+
+        public void setRevenuecatApiKey(String revenuecatApiKey) {
+            this.revenuecatApiKey = revenuecatApiKey;
+        }
+
+        public String getWebhookSecret() {
+            return webhookSecret;
+        }
+
+        public void setWebhookSecret(String webhookSecret) {
+            this.webhookSecret = webhookSecret;
         }
     }
 }

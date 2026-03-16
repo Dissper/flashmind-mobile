@@ -7,7 +7,9 @@ import '../core/auth/auth_state.dart';
 import '../features/generate/presentation/generate_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/login/presentation/login_screen.dart';
+import '../features/settings/presentation/settings_screen.dart';
 import '../features/study/presentation/study_screen.dart';
+import '../features/subscription/presentation/subscription_screen.dart';
 
 final routerRefreshProvider = Provider<ValueNotifier<int>>((ref) {
   final notifier = ValueNotifier<int>(0);
@@ -56,6 +58,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/generate',
         builder: (context, state) => const GenerateScreen(),
+      ),
+      GoRoute(
+        path: '/subscribe',
+        builder: (context, state) => const SubscriptionScreen(),
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
         path: '/study/:deckId',

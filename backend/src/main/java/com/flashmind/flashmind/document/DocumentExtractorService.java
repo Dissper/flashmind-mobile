@@ -15,6 +15,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 @Service
 public class DocumentExtractorService {
@@ -29,7 +32,7 @@ public class DocumentExtractorService {
         validateFile(file);
         String originalFilename = file.getOriginalFilename();
         SupportedDocumentType type = SupportedDocumentType.fromFilename(originalFilename);
-        String title = stripExtension(originalFilename);
+        String title = normalizeTitle(stripExtension(originalFilename));
 
         try {
             String extractedText = switch (type) {
@@ -38,7 +41,7 @@ public class DocumentExtractorService {
                 case PPTX -> extractPptx(file.getInputStream());
             };
 
-            String normalized = extractedText == null ? "" : extractedText.trim();
+            String normalized = extractedText == null ? "" : cleanExtractedText(extractedText);
             if (normalized.isBlank()) {
                 throw new BadRequestException("No extractable text found. Scanned PDFs, OCR, and images are not supported.");
             }
@@ -47,7 +50,7 @@ public class DocumentExtractorService {
                 normalized = normalized.substring(0, properties.getDocument().getMaxExtractedTextLength());
             }
 
-            return new ExtractedDocument(title, normalized);
+            return new ExtractedDocument(title, normalized, detectLanguage(normalized));
         } catch (IOException exception) {
             throw new BadRequestException("Could not read the uploaded document.");
         }
@@ -116,5 +119,122 @@ public class DocumentExtractorService {
             return cleaned.substring(0, lastDot);
         }
         return cleaned;
+    }
+
+    private String normalizeTitle(String rawTitle) {
+        String normalized = rawTitle
+                .replaceAll("[^\\p{L}\\p{N}]+", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        return normalized.isBlank() ? "Untitled Deck" : normalized;
+    }
+
+    private String cleanExtractedText(String rawText) {
+        List<String> cleanedLines = new ArrayList<>();
+
+        for (String rawLine : rawText.split("\\R")) {
+            String line = rawLine.replaceAll("\\s+", " ").trim();
+            if (line.isBlank()) {
+                continue;
+            }
+            if (startsReferenceSection(line)) {
+                break;
+            }
+            if (isBoilerplateLine(line)) {
+                continue;
+            }
+
+            cleanedLines.add(line);
+        }
+
+        String cleaned = String.join("\n", cleanedLines)
+                .replaceAll("\\n{3,}", "\n\n")
+                .trim();
+
+        if (cleaned.isBlank()) {
+            return rawText.trim();
+        }
+
+        return cleaned;
+    }
+
+    private boolean startsReferenceSection(String line) {
+        String normalized = line.toLowerCase(Locale.ROOT).trim();
+        return normalized.equals("references")
+                || normalized.equals("bibliography")
+                || normalized.equals("works cited")
+                || normalized.equals("referencias");
+    }
+
+    private boolean isBoilerplateLine(String line) {
+        String normalized = line.toLowerCase(Locale.ROOT);
+
+        if (normalized.contains("@")) {
+            return true;
+        }
+        if (normalized.contains("contents lists available")
+                || normalized.contains("sciencedirect")
+                || normalized.contains("journal homepage")
+                || normalized.contains("available online at")
+                || normalized.contains("corresponding author")
+                || normalized.contains("doi.org")
+                || normalized.startsWith("doi:")
+                || normalized.startsWith("received ")
+                || normalized.startsWith("accepted ")
+                || normalized.startsWith("available online ")
+                || normalized.startsWith("©")
+                || normalized.startsWith("copyright")) {
+            return true;
+        }
+        if ((normalized.contains("university")
+                || normalized.contains("department of")
+                || normalized.contains("faculty of")
+                || normalized.contains("institute of")
+                || normalized.contains("school of"))
+                && line.length() <= 140) {
+            return true;
+        }
+        if ((normalized.startsWith("keywords")
+                || normalized.startsWith("keyword")
+                || normalized.startsWith("author affiliations"))
+                && line.length() <= 160) {
+            return true;
+        }
+        if (line.length() <= 4) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private String detectLanguage(String text) {
+        String normalized = text.toLowerCase(Locale.ROOT);
+
+        int spanishSignals = 0;
+        int englishSignals = 0;
+
+        if (normalized.matches(".*[áéíóúñ¿¡].*")) {
+            spanishSignals += 2;
+        }
+
+        spanishSignals += countMatches(normalized,
+                " el ", " la ", " los ", " las ", " una ", " para ", " con ", " como ", " que ", " del ",
+                " se ", " en ", " por ", " su ", " puede ", " estudio ", " investigación ");
+        englishSignals += countMatches(normalized,
+                " the ", " and ", " for ", " with ", " from ", " this ", " that ", " study ", " research ",
+                " can ", " may ", " are ", " is ");
+
+        return spanishSignals >= englishSignals ? "Spanish" : "English";
+    }
+
+    private int countMatches(String text, String... patterns) {
+        int count = 0;
+        for (String pattern : patterns) {
+            if (text.contains(pattern)) {
+                count++;
+            }
+        }
+        return count;
     }
 }

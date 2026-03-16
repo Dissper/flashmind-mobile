@@ -38,6 +38,7 @@ public class SeedDataConfig {
             user.setProviderUserId("demo-google-user");
             user.setEmail("demo@flashmind.local");
             user.setDisplayName("Demo User");
+            user.setRevenuecatUserId("flashmind-user-seed");
             UserEntity savedUser = userRepository.save(user);
 
             DeckEntity flipDeck = new DeckEntity();

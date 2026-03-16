@@ -2,7 +2,7 @@ spring:
   application:
     name: flashmind-backend
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/flashmind}
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/flashmind}
     username: ${DB_USERNAME:flashmind}
     password: ${DB_PASSWORD:flashmind}
   jpa:
@@ -45,6 +45,18 @@ flashmind:
     max-card-count: 20
     default-card-count: 10
     ai-provider: openai
-    openai-api-key: ${OPENAI_API_KEY:}
-    openai-model: ${OPENAI_MODEL:gpt-4.1-mini}
+    openai-api-key: ${OPENAI_API_KEY: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}
+    openai-free-model: ${OPENAI_FREE_MODEL:gpt-4.1}
+    openai-premium-model: ${OPENAI_PREMIUM_MODEL:gpt-5.4}
     openai-base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+  subscription:
+    free-generation-limit: 3
+    free-max-cards: 10
+    premium-max-cards: 20
+    entitlement-name: ${REVENUECAT_ENTITLEMENT_NAME:premium}
+    # TODO: Replace PRODUCT_ID with the monthly product configured in App Store Connect and Google Play.
+    product-id: ${PRODUCT_ID:replace-me}
+    # TODO: Replace REVENUECAT_API_KEY with your RevenueCat server API key for future backend syncs.
+    revenuecat-api-key: ${REVENUECAT_API_KEY:}
+    # TODO: Configure WEBHOOK_SECRET to match the authorization header configured in RevenueCat webhooks.
+    webhook-secret: ${WEBHOOK_SECRET:}

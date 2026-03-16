@@ -8,11 +8,40 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 @Component
 @ConditionalOnProperty(name = "flashmind.generation.ai-provider", havingValue = "mock")
 public class MockFlashcardGenerationAdapter implements FlashcardGenerationPort {
+
+    private static final String[] FLIP_QUESTION_TEMPLATES = {
+            "What does %s refer to?",
+            "How would you explain %s?",
+            "What is important about %s?",
+            "What should a student know about %s?"
+    };
+
+    private static final String[] MULTIPLE_CHOICE_TEMPLATES = {
+            "Which statement about %s is correct?",
+            "Which option best describes %s?",
+            "What is true about %s?",
+            "Which idea correctly matches %s?"
+    };
+
+    private static final String[] FLIP_QUESTION_TEMPLATES_ES = {
+            "¿A qué se refiere %s?",
+            "¿Cómo explicarías %s?",
+            "¿Qué es importante sobre %s?",
+            "¿Qué debe saber un estudiante sobre %s?"
+    };
+
+    private static final String[] MULTIPLE_CHOICE_TEMPLATES_ES = {
+            "¿Qué afirmación sobre %s es correcta?",
+            "¿Qué opción describe mejor %s?",
+            "¿Qué es verdadero sobre %s?",
+            "¿Qué idea corresponde correctamente a %s?"
+    };
 
     @Override
     public List<FlashcardDraft> generate(FlashcardGenerationRequest request) {
@@ -21,9 +50,11 @@ public class MockFlashcardGenerationAdapter implements FlashcardGenerationPort {
 
         for (int index = 0; index < request.cardCount(); index++) {
             String segment = segments.get(index % segments.size());
+            String topicPrompt = buildTopicPrompt(segment);
+            boolean spanish = isSpanish(request.language());
             if (request.mode() == DeckMode.FLIP) {
                 cards.add(new FlashcardDraft(
-                        "What is one key idea from the document?",
+                        questionTemplate(spanish, true, index).formatted(topicPrompt),
                         segment,
                         List.of(),
                         null,
@@ -33,7 +64,7 @@ public class MockFlashcardGenerationAdapter implements FlashcardGenerationPort {
                 List<String> options = buildOptions(segments, index, segment);
                 int correctOption = options.indexOf(segment);
                 cards.add(new FlashcardDraft(
-                        "Which statement best matches the document content?",
+                        questionTemplate(spanish, false, index).formatted(topicPrompt),
                         null,
                         options,
                         correctOption,
@@ -50,6 +81,7 @@ public class MockFlashcardGenerationAdapter implements FlashcardGenerationPort {
                 .flatMap(line -> List.of(line.split("[.!?]")).stream())
                 .map(String::trim)
                 .filter(value -> value.length() >= 24)
+                .filter(this::isStudySegment)
                 .distinct()
                 .limit(Math.max(cardCount + 3L, 6L))
                 .toList();
@@ -60,6 +92,53 @@ public class MockFlashcardGenerationAdapter implements FlashcardGenerationPort {
 
         String fallback = text.length() > 160 ? text.substring(0, 160) : text;
         return List.of(fallback.trim().isEmpty() ? "FlashMind demo content" : fallback.trim());
+    }
+
+    private String questionTemplate(boolean spanish, boolean flip, int index) {
+        if (spanish) {
+            return flip
+                    ? FLIP_QUESTION_TEMPLATES_ES[index % FLIP_QUESTION_TEMPLATES_ES.length]
+                    : MULTIPLE_CHOICE_TEMPLATES_ES[index % MULTIPLE_CHOICE_TEMPLATES_ES.length];
+        }
+
+        return flip
+                ? FLIP_QUESTION_TEMPLATES[index % FLIP_QUESTION_TEMPLATES.length]
+                : MULTIPLE_CHOICE_TEMPLATES[index % MULTIPLE_CHOICE_TEMPLATES.length];
+    }
+
+    private boolean isStudySegment(String segment) {
+        String normalized = segment.toLowerCase(Locale.ROOT);
+        return !normalized.contains("contents lists available")
+                && !normalized.contains("sciencedirect")
+                && !normalized.contains("journal homepage")
+                && !normalized.contains("corresponding author")
+                && !normalized.contains("university")
+                && !normalized.contains("department of")
+                && !normalized.contains("doi")
+                && !normalized.startsWith("references");
+    }
+
+    private String buildTopicPrompt(String segment) {
+        String cleaned = segment
+                .replaceAll("\\s+", " ")
+                .replaceAll("[\"'`]", "")
+                .trim();
+
+        String[] words = cleaned.split(" ");
+        int wordCount = Math.min(words.length, 7);
+        String prompt = String.join(" ", List.of(words).subList(0, wordCount))
+                .replaceAll("[,:;]+$", "")
+                .trim();
+
+        if (prompt.length() < 8) {
+            return "this topic";
+        }
+
+        return prompt;
+    }
+
+    private boolean isSpanish(String language) {
+        return language != null && language.equalsIgnoreCase("Spanish");
     }
 
     private List<String> buildOptions(List<String> segments, int offset, String correctAnswer) {

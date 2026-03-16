@@ -38,12 +38,22 @@ public class OpenAiFlashcardGenerationAdapter implements FlashcardGenerationPort
         }
 
         Map<String, Object> payload = Map.of(
-                "model", properties.getGeneration().getOpenaiModel(),
+                "model", request.model(),
                 "response_format", Map.of("type", "json_object"),
                 "messages", List.of(
                         Map.of(
                                 "role", "system",
-                                "content", "You generate concise study flashcards and return strict JSON only."
+                                "content", """
+                                        You generate high-quality study flashcards and return strict JSON only.
+                                        The flashcards must test knowledge of the topic itself, not the source file.
+                                        Never mention the document, file, text, slide deck, notes, or source material in any question.
+                                        Ignore editorial boilerplate, journal headers, website headers, author names, university affiliations, copyright text, citations, and references unless they are genuinely the study topic.
+                                        Every question, answer, and option must be written in the same language as the study material.
+                                        Do not mix English and Spanish in the same deck unless the source text itself is genuinely bilingual.
+                                        Never let the question reveal the full answer text or copy the correct option into the question stem.
+                                        Questions must be specific, varied, and useful for studying.
+                                        Avoid duplicate or near-duplicate questions.
+                                        """
                         ),
                         Map.of(
                                 "role", "user",
@@ -113,6 +123,14 @@ public class OpenAiFlashcardGenerationAdapter implements FlashcardGenerationPort
                     { "question": "string", "answer": "string" }
                   ]
                 }
+
+                Requirements for FLIP cards:
+                - Ask about concepts, definitions, mechanisms, examples, comparisons, causes, effects, or relationships from the topic.
+                - Questions must be answerable from the source text.
+                - Each question must be distinct.
+                - Write both the question and the answer in %s.
+                - Do not copy the answer into the question.
+                - Do not ask generic questions like "What is one key idea from the document?"
                 """
                 : """
                 Return JSON with this shape:
@@ -125,13 +143,31 @@ public class OpenAiFlashcardGenerationAdapter implements FlashcardGenerationPort
                     }
                   ]
                 }
+
+                Requirements for MULTIPLE_CHOICE cards:
+                - Ask about concepts in the topic itself, not about the document.
+                - The correct option must be clearly supported by the source text.
+                - Distractors must be plausible but clearly wrong.
+                - Each question must be distinct.
+                - Write the question and all options in %s.
+                - Do not copy the correct option into the question stem.
+                - Do not ask generic questions like "Which statement best matches the document content?"
                 """;
 
         return """
                 Generate %d flashcards for the title "%s".
+                Output language: %s
                 Mode: %s
                 Use only the source text below.
                 Keep the cards short, clear, and study-friendly.
+                Focus on the subject matter discussed in the text.
+                Ask about the topic, not about the existence of the file or document.
+                Ignore publisher headers, website navigation text, author affiliations, university names, citation metadata, and references unless the document is actually studying those things.
+                Prefer concrete questions about definitions, processes, components, causes, examples, comparisons, formulas, dates, terminology, and relationships found in the text.
+                Make the wording natural for a student who is studying the topic.
+                Do not repeat the same question stem across cards.
+                The deck must stay entirely in %s.
+                Do not use phrases such as "according to the document", "in the text", "from the file", or "from the source".
                 Do not add explanations outside the JSON.
                 %s
 
@@ -140,7 +176,9 @@ public class OpenAiFlashcardGenerationAdapter implements FlashcardGenerationPort
                 """.formatted(
                 request.cardCount(),
                 request.titleHint(),
+                request.language(),
                 request.mode().name(),
+                request.language(),
                 modeInstructions,
                 request.sourceText()
         );

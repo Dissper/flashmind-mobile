@@ -4,6 +4,7 @@ import com.flashmind.flashmind.common.BadRequestException;
 import com.flashmind.flashmind.common.ResourceNotFoundException;
 import com.flashmind.flashmind.config.AppProperties;
 import com.flashmind.flashmind.security.AuthenticatedUser;
+import com.flashmind.flashmind.user.GenerationAccessService;
 import com.flashmind.flashmind.security.JwtTokenService;
 import com.flashmind.flashmind.user.UserEntity;
 import com.flashmind.flashmind.user.UserRepository;
@@ -21,17 +22,20 @@ public class SocialAuthService {
     private final UserRepository userRepository;
     private final JwtTokenService jwtTokenService;
     private final AppProperties properties;
+    private final GenerationAccessService generationAccessService;
     private final Map<SocialProvider, SocialIdentityVerifier> verifiers;
 
     public SocialAuthService(
             UserRepository userRepository,
             JwtTokenService jwtTokenService,
             AppProperties properties,
+            GenerationAccessService generationAccessService,
             List<SocialIdentityVerifier> verifiers
     ) {
         this.userRepository = userRepository;
         this.jwtTokenService = jwtTokenService;
         this.properties = properties;
+        this.generationAccessService = generationAccessService;
         this.verifiers = new EnumMap<>(SocialProvider.class);
         for (SocialIdentityVerifier verifier : verifiers) {
             this.verifiers.put(verifier.provider(), verifier);
@@ -55,16 +59,16 @@ public class SocialAuthService {
         user.setEmail(identity.email());
         user.setDisplayName(identity.displayName());
 
-        UserEntity savedUser = userRepository.save(user);
+        UserEntity savedUser = ensureRevenueCatUserId(userRepository.save(user));
         String token = jwtTokenService.generateToken(savedUser);
-        return new AuthResponse(token, UserResponse.fromEntity(savedUser));
+        return new AuthResponse(token, UserResponse.fromEntity(savedUser, generationAccessService.getGenerationAccess(savedUser)));
     }
 
     @Transactional(readOnly = true)
     public UserResponse currentUser(AuthenticatedUser authenticatedUser) {
         UserEntity user = userRepository.findById(authenticatedUser.userId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
-        return UserResponse.fromEntity(user);
+        return UserResponse.fromEntity(user, generationAccessService.getGenerationAccess(user));
     }
 
     @Transactional
@@ -82,8 +86,17 @@ public class SocialAuthService {
         user.setEmail(email);
         user.setDisplayName(properties.getAuth().getDevBypassDisplayName());
 
-        UserEntity savedUser = userRepository.save(user);
+        UserEntity savedUser = ensureRevenueCatUserId(userRepository.save(user));
         String token = jwtTokenService.generateToken(savedUser);
-        return new AuthResponse(token, UserResponse.fromEntity(savedUser));
+        return new AuthResponse(token, UserResponse.fromEntity(savedUser, generationAccessService.getGenerationAccess(savedUser)));
+    }
+
+    private UserEntity ensureRevenueCatUserId(UserEntity user) {
+        if (user.getRevenuecatUserId() != null && !user.getRevenuecatUserId().isBlank()) {
+            return user;
+        }
+
+        user.setRevenuecatUserId("flashmind-user-" + user.getId());
+        return userRepository.save(user);
     }
 }

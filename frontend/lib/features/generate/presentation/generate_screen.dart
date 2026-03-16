@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/subscription/subscription_controller.dart';
 import '../../../shared/models/flashcard_mode.dart';
 import '../../../shared/widgets/app_shell.dart';
 import '../../../shared/widgets/primary_action_button.dart';
@@ -15,6 +16,10 @@ class GenerateScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(generateControllerProvider);
     final controller = ref.read(generateControllerProvider.notifier);
+    final subscriptionState = ref.watch(subscriptionControllerProvider);
+    final maxCardsAllowed = subscriptionState.maxCardsAllowed < 4
+        ? 4
+        : subscriptionState.maxCardsAllowed;
 
     ref.listen<GenerateState>(generateControllerProvider, (previous, next) {
       final message = next.errorMessage;
@@ -85,8 +90,8 @@ class GenerateScreen extends ConsumerWidget {
                   Slider(
                     value: state.cardCount.toDouble(),
                     min: 4,
-                    max: AppConfig.maxCards.toDouble(),
-                    divisions: AppConfig.maxCards - 4,
+                    max: maxCardsAllowed.toDouble(),
+                    divisions: maxCardsAllowed - 4,
                     label: state.cardCount.toString(),
                     onChanged: state.isSubmitting ? null : controller.setCardCount,
                   ),
@@ -94,7 +99,7 @@ class GenerateScreen extends ConsumerWidget {
                   Text(
                     'Supported files: ${AppConfig.supportedFileTypesLabel}\n'
                     'Max file size: ${AppConfig.maxFileSizeLabel}\n'
-                    'Max generated cards: ${AppConfig.maxCards}',
+                    'Current plan limit: $maxCardsAllowed cards',
                   ),
                   if (state.progressMessage != null) ...[
                     const SizedBox(height: 20),

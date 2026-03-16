@@ -9,16 +9,30 @@ public record UserResponse(
         SocialProvider provider,
         String email,
         String displayName,
+        String revenuecatUserId,
+        boolean subscriptionActive,
+        boolean entitlementActive,
+        boolean subscribed,
+        int freeGenerationsUsed,
+        int freeGenerationsRemaining,
+        int maxCardsAllowed,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {
 
-    public static UserResponse fromEntity(UserEntity user) {
+    public static UserResponse fromEntity(UserEntity user, GenerationAccessResponse access) {
         return new UserResponse(
                 user.getId(),
                 user.getProvider(),
                 user.getEmail(),
                 user.getDisplayName(),
+                user.getRevenuecatUserId(),
+                user.isSubscriptionActive(),
+                user.isEntitlementActive(),
+                access.subscribed(),
+                access.freeGenerationsUsed(),
+                access.freeGenerationsRemaining(),
+                access.maxCardsAllowed(),
                 user.getCreatedAt(),
                 user.getUpdatedAt()
         );

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/subscription/subscription_controller.dart';
 import '../../../shared/models/deck_detail.dart';
 import '../../../shared/models/flashcard_mode.dart';
 import '../../home/data/deck_repository.dart';
@@ -69,6 +70,14 @@ class GenerateController extends Notifier<GenerateState> {
   @override
   GenerateState build() {
     ref.onDispose(() => _progressTimer?.cancel());
+    ref.listen(subscriptionControllerProvider, (previous, next) {
+      if (state.cardCount > next.maxCardsAllowed) {
+        state = state.copyWith(
+          cardCount: next.maxCardsAllowed,
+          clearError: true,
+        );
+      }
+    });
     return const GenerateState.initial();
   }
 

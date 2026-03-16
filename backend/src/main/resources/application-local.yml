@@ -2,6 +2,10 @@ spring:
   config:
     activate:
       on-profile: local
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://127.0.0.1:5433/flashmind}
+    username: ${DB_USERNAME:flashmind}
+    password: ${DB_PASSWORD:flashmind}
   jpa:
     show-sql: true
 

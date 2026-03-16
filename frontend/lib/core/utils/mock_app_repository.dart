@@ -1,7 +1,9 @@
+import '../../core/config/app_config.dart';
 import '../../shared/models/deck_detail.dart';
 import '../../shared/models/deck_summary.dart';
 import '../../shared/models/flashcard_item.dart';
 import '../../shared/models/flashcard_mode.dart';
+import '../../shared/models/generation_access.dart';
 import '../../shared/models/user_profile.dart';
 
 class MockAppRepository {
@@ -17,13 +19,42 @@ class MockAppRepository {
   final Map<int, List<FlashcardItem>> _flashcardsByDeckId = {};
   int _nextDeckId = 3;
   int _nextFlashcardId = 100;
+  int _freeGenerationsUsed = 0;
+  bool _premiumActive = false;
 
-  UserProfile get currentUser => const UserProfile(
-        id: 1,
-        email: 'demo@flashmind.local',
-        displayName: 'Demo User',
-        provider: 'DEV',
-      );
+  UserProfile get currentUser {
+    final access = getGenerationAccess();
+    return UserProfile(
+      id: 1,
+      email: 'demo@flashmind.local',
+      displayName: 'Demo User',
+      provider: 'DEV',
+      revenueCatUserId: 'flashmind-user-1',
+      subscriptionActive: _premiumActive,
+      entitlementActive: _premiumActive,
+      isSubscribed: access.subscribed,
+      freeGenerationsUsed: access.freeGenerationsUsed,
+      freeGenerationsRemaining: access.freeGenerationsRemaining,
+      maxCardsAllowed: access.maxCardsAllowed,
+    );
+  }
+
+  GenerationAccess getGenerationAccess() {
+    final remaining = (AppConfig.freeGenerationLimit - _freeGenerationsUsed)
+        .clamp(0, AppConfig.freeGenerationLimit);
+    return GenerationAccess(
+      subscribed: _premiumActive,
+      freeGenerationsUsed: _freeGenerationsUsed,
+      freeGenerationsRemaining: remaining,
+      canGenerate: _premiumActive || remaining > 0,
+      maxCardsAllowed:
+          _premiumActive ? AppConfig.premiumMaxCards : AppConfig.freeMaxCards,
+    );
+  }
+
+  void activatePremium() {
+    _premiumActive = true;
+  }
 
   List<DeckSummary> listDecks() {
     _seedIfNeeded();
@@ -56,6 +87,16 @@ class MockAppRepository {
     required FlashcardMode mode,
     required int cardCount,
   }) {
+    final access = getGenerationAccess();
+    if (!access.canGenerate) {
+      throw Exception('Free generation limit reached. Upgrade to premium.');
+    }
+    if (cardCount > access.maxCardsAllowed) {
+      throw Exception(
+        'Your current plan allows up to ${access.maxCardsAllowed} cards per deck.',
+      );
+    }
+
     final now = DateTime.now();
     final deck = DeckDetail(
       id: _nextDeckId++,
@@ -96,6 +137,9 @@ class MockAppRepository {
 
     _decks.add(deck);
     _flashcardsByDeckId[deck.id] = cards;
+    if (!_premiumActive) {
+      _freeGenerationsUsed++;
+    }
     return deck;
   }
 

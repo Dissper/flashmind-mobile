@@ -104,6 +104,21 @@ class AuthController extends Notifier<AuthState> {
     state = const AuthState.unauthenticated();
   }
 
+  Future<void> refreshCurrentUser() async {
+    final token = state.token;
+    if (token == null || token.isEmpty) {
+      return;
+    }
+
+    try {
+      final user = await _authRepository.fetchCurrentUser();
+      state = AuthState.authenticated(user: user, token: token);
+    } catch (_) {
+      await _tokenStorage.clearToken();
+      state = const AuthState.unauthenticated();
+    }
+  }
+
   Future<void> continueWithoutLogin() async {
     state = const AuthState.loading();
     try {

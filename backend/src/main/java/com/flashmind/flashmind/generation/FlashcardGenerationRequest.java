@@ -6,6 +6,8 @@ public record FlashcardGenerationRequest(
         String sourceText,
         DeckMode mode,
         int cardCount,
-        String titleHint
+        String titleHint,
+        String language,
+        String model
 ) {
 }

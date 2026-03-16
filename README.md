@@ -5,6 +5,7 @@ FlashMind Mobile is a simple fullstack MVP for generating study flashcards from 
 ## Stack
 
 - Frontend: Flutter, Dart, Riverpod, go_router, dio, flutter_secure_storage, file_picker
+- Mobile subscriptions: RevenueCat
 - Backend: Java 21, Spring Boot, Spring Security, Spring Data JPA, PostgreSQL, Maven
 - Document extraction: Apache PDFBox, Apache POI
 - Auth: Google and Apple social login entrypoint with app JWT sessions
@@ -38,38 +39,42 @@ flashmind-mobile/
 ```bash
 docker compose up -d
 ```
-
-2. Copy environment values:
-
-```bash
-cp .env.example .env
-```
-
-3. Review backend config files:
+2. Review backend config files:
 
 - `backend/src/main/resources/application.yml`
 - `backend/src/main/resources/application-local.yml`
 - `backend/src/main/resources/application-example.yml`
 
-4. Run the backend with the local profile:
+3. Run the backend with the local profile:
 
 ```bash
 cd backend
 mvn spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
-The local profile uses a mock flashcard generator so the application can run before real AI credentials are configured.
+The local profile is already configured for Docker PostgreSQL at `127.0.0.1:5433`, enables dev-login bypass, and uses the mock flashcard generator until you wire a real OpenAI key/provider.
 
 ## Frontend Setup
 
 1. Review `frontend/pubspec.yaml`.
-2. Copy frontend env values from `frontend/.env.example` if you want to externalize app config later.
-3. Run:
+2. Run:
 
 ```bash
 cd frontend
 flutter pub get
 flutter run
+```
+
+Local defaults:
+
+- Android emulator: `http://10.0.2.2:8080`
+- iOS simulator / desktop / web: `http://localhost:8080`
+- Frontend mocks are disabled by default in local code now
+
+If you want to override the backend URL manually:
+
+```bash
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080
 ```
 
 ## Important Flutter Note
@@ -94,9 +99,13 @@ That will materialize the standard Flutter platform shells around the existing D
 
 - `OPENAI_API_KEY`
 - `JWT_SECRET`
+- `REVENUECAT_API_KEY`
+- `WEBHOOK_SECRET`
+- `PRODUCT_ID`
 - PostgreSQL credentials
 - Google OAuth client IDs and Android/iOS configuration
 - Apple Sign In capability, service identifiers, and key material
+- RevenueCat project, entitlement, and store product configuration
 - Real production-grade Google and Apple ID token verification
 
 The project already contains placeholders, config bindings, and TODO comments where these values need to be wired.
@@ -113,8 +122,7 @@ Backend:
 
 Frontend:
 
-- Run Flutter with `--dart-define=ALLOW_LOGIN_BYPASS=true`
-- This shows an `Entrar sin login` button on the login screen
+- The local app config already enables `Entrar sin login`
 - If you also want to work without the backend running, add `--dart-define=USE_FRONTEND_MOCKS=true`
 - In mock mode, auth, deck listing, deck generation, and study data all run locally in memory
 
@@ -139,10 +147,13 @@ docker compose logs -f postgres
 
 - `POST /api/auth/social-login`
 - `GET /api/auth/me`
+- `GET /api/me`
+- `GET /api/me/generation-access`
 - `GET /api/decks`
 - `GET /api/decks/{id}`
 - `GET /api/decks/{id}/flashcards`
 - `POST /api/decks/generate`
+- `POST /api/subscriptions/revenuecat/webhook`
 
 ## Development Seed Data
 

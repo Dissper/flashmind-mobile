@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/auth_controller.dart';
+import '../../../core/subscription/subscription_controller.dart';
 import '../../../shared/widgets/app_shell.dart';
 import '../../../shared/widgets/deck_list_tile.dart';
 import '../../../shared/widgets/primary_action_button.dart';
@@ -15,10 +16,26 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
     final decks = ref.watch(decksProvider);
+    final subscriptionState = ref.watch(subscriptionControllerProvider);
+
+    ref.listen(subscriptionControllerProvider, (previous, next) {
+      if (next.errorMessage != null &&
+          next.errorMessage != previous?.errorMessage &&
+          next.errorMessage!.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.errorMessage!)),
+        );
+      }
+    });
 
     return AppShell(
       title: 'FlashMind',
       actions: [
+        IconButton(
+          tooltip: 'Settings',
+          onPressed: () => context.push('/settings'),
+          icon: const Icon(Icons.settings_outlined),
+        ),
         IconButton(
           tooltip: 'Logout',
           onPressed: () => ref.read(authControllerProvider.notifier).logout(),
@@ -46,15 +63,25 @@ class HomeScreen extends ConsumerWidget {
                         ),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Turn a document into a ready-to-study deck in one fast flow.',
-                    style: TextStyle(color: Colors.white70),
+                  Text(
+                    subscriptionState.isSubscribed
+                        ? 'Premium active. Unlimited deck generations and up to ${subscriptionState.maxCardsAllowed} cards.'
+                        : 'Free plan: ${subscriptionState.freeGenerationsRemaining} of ${subscriptionState.freeGenerationLimit} generations left, up to ${subscriptionState.maxCardsAllowed} cards.',
+                    style: const TextStyle(color: Colors.white70),
                   ),
                   const SizedBox(height: 20),
                   PrimaryActionButton(
                     label: 'Generate Flashcards',
                     icon: Icons.auto_awesome_rounded,
-                    onPressed: () => context.push('/generate'),
+                    onPressed: () async {
+                      final canGenerate = await ref
+                          .read(subscriptionControllerProvider.notifier)
+                          .checkGenerationAccess();
+                      if (!context.mounted || canGenerate == null) {
+                        return;
+                      }
+                      context.push(canGenerate ? '/generate' : '/subscribe');
+                    },
                   ),
                 ],
               ),
@@ -79,7 +106,7 @@ class HomeScreen extends ConsumerWidget {
                           padding: const EdgeInsets.only(bottom: 12),
                           child: DeckListTile(
                             deck: deck,
-                            onTap: () => context.go('/study/${deck.id}'),
+                            onTap: () => context.push('/study/${deck.id}'),
                           ),
                         ),
                       )

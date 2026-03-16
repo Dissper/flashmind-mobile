@@ -27,23 +27,34 @@ class AuthRepository {
           email: 'demo@flashmind.local',
           displayName: 'Demo User',
           provider: 'DEV',
+          revenueCatUserId: 'flashmind-user-1',
+          subscriptionActive: false,
+          entitlementActive: false,
+          isSubscribed: false,
+          freeGenerationsUsed: 0,
+          freeGenerationsRemaining: AppConfig.freeGenerationLimit,
+          maxCardsAllowed: AppConfig.freeMaxCards,
         ),
       );
     }
 
-    final response = await _dio.post<Map<String, dynamic>>(
-      '/api/auth/social-login',
-      data: {
-        'provider': provider,
-        'idToken': idToken,
-      },
-    );
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/auth/social-login',
+        data: {
+          'provider': provider,
+          'idToken': idToken,
+        },
+      );
 
-    final data = response.data ?? <String, dynamic>{};
-    return SocialLoginResult(
-      token: data['token'] as String,
-      user: UserProfile.fromJson(data['user'] as Map<String, dynamic>),
-    );
+      final data = response.data ?? <String, dynamic>{};
+      return SocialLoginResult(
+        token: data['token'] as String,
+        user: UserProfile.fromJson(data['user'] as Map<String, dynamic>),
+      );
+    } on DioException catch (error) {
+      throw Exception(_extractApiErrorMessage(error));
+    }
   }
 
   Future<SocialLoginResult> devLogin() async {
@@ -55,12 +66,17 @@ class AuthRepository {
       );
     }
 
-    final response = await _dio.post<Map<String, dynamic>>('/api/auth/dev-login');
-    final data = response.data ?? <String, dynamic>{};
-    return SocialLoginResult(
-      token: data['token'] as String,
-      user: UserProfile.fromJson(data['user'] as Map<String, dynamic>),
-    );
+    try {
+      final response =
+          await _dio.post<Map<String, dynamic>>('/api/auth/dev-login');
+      final data = response.data ?? <String, dynamic>{};
+      return SocialLoginResult(
+        token: data['token'] as String,
+        user: UserProfile.fromJson(data['user'] as Map<String, dynamic>),
+      );
+    } on DioException catch (error) {
+      throw Exception(_extractApiErrorMessage(error));
+    }
   }
 
   Future<UserProfile> fetchCurrentUser() async {
@@ -68,8 +84,24 @@ class AuthRepository {
       return MockAppRepository.instance.currentUser;
     }
 
-    final response = await _dio.get<Map<String, dynamic>>('/api/auth/me');
-    return UserProfile.fromJson(response.data ?? <String, dynamic>{});
+    try {
+      final response = await _dio.get<Map<String, dynamic>>('/api/me');
+      return UserProfile.fromJson(response.data ?? <String, dynamic>{});
+    } on DioException catch (error) {
+      throw Exception(_extractApiErrorMessage(error));
+    }
+  }
+
+  String _extractApiErrorMessage(DioException error) {
+    final data = error.response?.data;
+    if (data is Map<String, dynamic>) {
+      final message = data['message'];
+      if (message is String && message.isNotEmpty) {
+        return message;
+      }
+    }
+
+    return error.message ?? 'Request failed.';
   }
 }
 
