@@ -18,8 +18,7 @@ flashmind:
     apple-team-id: replace-me
     apple-key-id: replace-me
   generation:
-    ai-provider: openai
-    openai-api-key: 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
+    openai-api-key: ""
     openai-free-model: gpt-4.1
     openai-premium-model: gpt-5.4
     openai-base-url: https://api.openai.com

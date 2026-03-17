@@ -74,6 +74,16 @@ class DeckRepository {
         .toList();
   }
 
+  Future<void> deleteDeck(int deckId) async {
+    if (AppConfig.useMockBackend) {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      MockAppRepository.instance.deleteDeck(deckId);
+      return;
+    }
+
+    await _dio.delete<void>('/api/decks/$deckId');
+  }
+
   Future<DeckDetail> generateDeck({
     required PlatformFile file,
     required FlashcardMode mode,

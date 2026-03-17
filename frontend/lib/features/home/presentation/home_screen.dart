@@ -7,13 +7,54 @@ import '../../../core/subscription/subscription_controller.dart';
 import '../../../shared/widgets/app_shell.dart';
 import '../../../shared/widgets/deck_list_tile.dart';
 import '../../../shared/widgets/primary_action_button.dart';
+import '../../../shared/models/deck_summary.dart';
 import '../data/deck_repository.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final Set<int> _hiddenDeckIds = <int>{};
+
+  Future<bool> _confirmDeleteDeck(DeckSummary deck) async {
+    try {
+      await ref.read(deckRepositoryProvider).deleteDeck(deck.id);
+      if (!mounted) {
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      if (!mounted) {
+        return false;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete ${deck.title}: $error')),
+      );
+      return false;
+    }
+  }
+
+  void _handleDeckDeleted(DeckSummary deck) {
+    setState(() {
+      _hiddenDeckIds.add(deck.id);
+    });
+    ref.invalidate(decksProvider);
+    ref.invalidate(deckDetailProvider(deck.id));
+    ref.invalidate(deckFlashcardsProvider(deck.id));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${deck.title} deleted.')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
     final decks = ref.watch(decksProvider);
     final subscriptionState = ref.watch(subscriptionControllerProvider);
@@ -94,19 +135,25 @@ class HomeScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             decks.when(
               data: (items) {
-                if (items.isEmpty) {
+                final visibleItems = items
+                    .where((deck) => !_hiddenDeckIds.contains(deck.id))
+                    .toList(growable: false);
+
+                if (visibleItems.isEmpty) {
                   return const _EmptyDeckState();
                 }
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: items
+                  children: visibleItems
                       .map(
                         (deck) => Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: DeckListTile(
                             deck: deck,
                             onTap: () => context.push('/study/${deck.id}'),
+                            onDelete: () => _confirmDeleteDeck(deck),
+                            onDeleteDismissed: () => _handleDeckDeleted(deck),
                           ),
                         ),
                       )

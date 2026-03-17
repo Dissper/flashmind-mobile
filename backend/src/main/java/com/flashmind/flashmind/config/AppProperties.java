@@ -186,7 +186,6 @@ public class AppProperties {
     public static class Generation {
         private int maxCardCount = 20;
         private int defaultCardCount = 10;
-        private String aiProvider = "openai";
         private String openaiApiKey = "";
         private String openaiFreeModel = "gpt-4.1";
         private String openaiPremiumModel = "gpt-5.4";
@@ -206,14 +205,6 @@ public class AppProperties {
 
         public void setDefaultCardCount(int defaultCardCount) {
             this.defaultCardCount = defaultCardCount;
-        }
-
-        public String getAiProvider() {
-            return aiProvider;
-        }
-
-        public void setAiProvider(String aiProvider) {
-            this.aiProvider = aiProvider;
         }
 
         public String getOpenaiApiKey() {

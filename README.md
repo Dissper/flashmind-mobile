@@ -9,7 +9,7 @@ FlashMind Mobile is a simple fullstack MVP for generating study flashcards from 
 - Backend: Java 21, Spring Boot, Spring Security, Spring Data JPA, PostgreSQL, Maven
 - Document extraction: Apache PDFBox, Apache POI
 - Auth: Google and Apple social login entrypoint with app JWT sessions
-- AI integration: `FlashcardGenerationPort` with OpenAI adapter placeholder and local mock adapter
+- AI integration: `FlashcardGenerationPort` with an OpenAI-backed flashcard generator
 
 ## Repository Structure
 
@@ -52,7 +52,7 @@ cd backend
 mvn spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
-The local profile is already configured for Docker PostgreSQL at `127.0.0.1:5433`, enables dev-login bypass, and uses the mock flashcard generator until you wire a real OpenAI key/provider.
+The local profile is already configured for Docker PostgreSQL at `127.0.0.1:5433` and enables dev-login bypass. Flashcard generation uses OpenAI, so set `OPENAI_API_KEY` before generating decks.
 
 ## Frontend Setup
 

@@ -5,6 +5,7 @@ import com.flashmind.flashmind.generation.DeckGenerationService;
 import com.flashmind.flashmind.security.AuthenticatedUser;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -48,6 +49,15 @@ public class DeckController {
             @PathVariable Long id
     ) {
         return deckService.getFlashcards(authenticatedUser.userId(), id);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteDeck(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @PathVariable Long id
+    ) {
+        deckService.deleteDeck(authenticatedUser.userId(), id);
     }
 
     @PostMapping(path = "/generate", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

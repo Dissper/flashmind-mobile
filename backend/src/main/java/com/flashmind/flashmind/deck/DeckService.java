@@ -50,6 +50,13 @@ public class DeckService {
                 .toList();
     }
 
+    @Transactional
+    public void deleteDeck(Long userId, Long deckId) {
+        DeckEntity deck = findOwnedDeck(userId, deckId);
+        flashcardRepository.deleteByDeckId(deck.getId());
+        deckRepository.delete(deck);
+    }
+
     public DeckEntity findOwnedDeck(Long userId, Long deckId) {
         return deckRepository.findByIdAndUserId(deckId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Deck not found."));

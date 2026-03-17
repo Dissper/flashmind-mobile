@@ -82,6 +82,18 @@ class MockAppRepository {
     return List<FlashcardItem>.from(_flashcardsByDeckId[deckId] ?? const []);
   }
 
+  void deleteDeck(int deckId) {
+    _seedIfNeeded();
+    final index = _decks.indexWhere((deck) => deck.id == deckId);
+
+    if (index == -1) {
+      throw StateError('Deck not found.');
+    }
+
+    _decks.removeAt(index);
+    _flashcardsByDeckId.remove(deckId);
+  }
+
   DeckDetail generateDeck({
     required String title,
     required FlashcardMode mode,

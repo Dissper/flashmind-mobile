@@ -1,40 +1,51 @@
 package com.flashmind.flashmind.generation;
 
 import com.flashmind.flashmind.common.BadRequestException;
+import com.flashmind.flashmind.common.UpstreamServiceException;
 import com.flashmind.flashmind.config.AppProperties;
 import com.flashmind.flashmind.deck.DeckMode;
 import com.flashmind.flashmind.flashcard.FlashcardType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Component
-@ConditionalOnProperty(name = "flashmind.generation.ai-provider", havingValue = "openai", matchIfMissing = true)
 public class OpenAiFlashcardGenerationAdapter implements FlashcardGenerationPort {
 
     private final AppProperties properties;
     private final ObjectMapper objectMapper;
     private final RestClient restClient;
 
+    @Autowired
     public OpenAiFlashcardGenerationAdapter(AppProperties properties, ObjectMapper objectMapper) {
+        this(properties, objectMapper, RestClient.builder().build());
+    }
+
+    OpenAiFlashcardGenerationAdapter(AppProperties properties, ObjectMapper objectMapper, RestClient restClient) {
         this.properties = properties;
         this.objectMapper = objectMapper;
-        this.restClient = RestClient.builder().build();
+        this.restClient = restClient;
     }
 
     @Override
     public List<FlashcardDraft> generate(FlashcardGenerationRequest request) {
-        if (properties.getGeneration().getOpenaiApiKey() == null
-                || properties.getGeneration().getOpenaiApiKey().isBlank()) {
+        if (!hasConfiguredApiKey()) {
             throw new BadRequestException("OPENAI_API_KEY is not configured.");
+        }
+        if (request.model() == null || request.model().isBlank()) {
+            throw new BadRequestException("OpenAI model is not configured.");
         }
 
         Map<String, Object> payload = Map.of(
@@ -62,13 +73,23 @@ public class OpenAiFlashcardGenerationAdapter implements FlashcardGenerationPort
                 )
         );
 
-        JsonNode response = restClient.post()
-                .uri(properties.getGeneration().getOpenaiBaseUrl() + "/v1/chat/completions")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.getGeneration().getOpenaiApiKey())
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(payload)
-                .retrieve()
-                .body(JsonNode.class);
+        JsonNode response;
+        try {
+            response = restClient.post()
+                    .uri(properties.getGeneration().getOpenaiBaseUrl() + "/v1/chat/completions")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.getGeneration().getOpenaiApiKey())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(payload)
+                    .retrieve()
+                    .body(JsonNode.class);
+        } catch (RestClientResponseException exception) {
+            throw mapProviderException(exception);
+        } catch (RestClientException exception) {
+            throw new UpstreamServiceException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "OpenAI is temporarily unavailable. Please try again later."
+            );
+        }
 
         if (response == null) {
             throw new BadRequestException("AI provider returned an empty response.");
@@ -112,6 +133,60 @@ public class OpenAiFlashcardGenerationAdapter implements FlashcardGenerationPort
         } catch (Exception exception) {
             throw new BadRequestException("AI provider response could not be parsed.");
         }
+    }
+
+    private boolean hasConfiguredApiKey() {
+        String apiKey = properties.getGeneration().getOpenaiApiKey();
+        return apiKey != null
+                && !apiKey.isBlank()
+                && !"replace-me".equalsIgnoreCase(apiKey.trim());
+    }
+
+    private RuntimeException mapProviderException(RestClientResponseException exception) {
+        String providerMessage = extractProviderMessage(exception.getResponseBodyAsString());
+        int status = exception.getStatusCode().value();
+
+        if (status == HttpStatus.TOO_MANY_REQUESTS.value()) {
+            String message = providerMessage.toLowerCase(Locale.ROOT).contains("quota")
+                    ? "OpenAI quota is exhausted. Configure a billed OPENAI_API_KEY or wait for quota to reset."
+                    : "OpenAI rate limit exceeded. Please try again in a moment.";
+            return new UpstreamServiceException(HttpStatus.TOO_MANY_REQUESTS, message);
+        }
+        if (status == HttpStatus.UNAUTHORIZED.value() || status == HttpStatus.FORBIDDEN.value()) {
+            return new UpstreamServiceException(
+                    HttpStatus.BAD_GATEWAY,
+                    "OpenAI credentials are invalid or do not have access to the requested model."
+            );
+        }
+        if (status >= 400 && status < 500) {
+            String message = providerMessage.isBlank()
+                    ? "OpenAI rejected the flashcard generation request."
+                    : "OpenAI rejected the flashcard generation request: " + providerMessage;
+            return new UpstreamServiceException(HttpStatus.BAD_GATEWAY, message);
+        }
+
+        return new UpstreamServiceException(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "OpenAI is temporarily unavailable. Please try again later."
+        );
+    }
+
+    private String extractProviderMessage(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            return "";
+        }
+
+        try {
+            JsonNode errorNode = objectMapper.readTree(responseBody).path("error");
+            String message = errorNode.path("message").asText("");
+            if (!message.isBlank()) {
+                return message.trim();
+            }
+        } catch (Exception ignored) {
+            // Fall back to the raw response body when the provider body is not valid JSON.
+        }
+
+        return responseBody.replaceAll("\\s+", " ").trim();
     }
 
     private String buildPrompt(FlashcardGenerationRequest request) {
