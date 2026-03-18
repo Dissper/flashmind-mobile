@@ -4,7 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/subscription/subscription_controller.dart';
+import '../../../core/theme/app_theme_tokens.dart';
+import '../../../shared/widgets/app_animated_reveal.dart';
+import '../../../shared/widgets/app_empty_state.dart';
+import '../../../shared/widgets/app_hero_panel.dart';
+import '../../../shared/widgets/app_pill.dart';
+import '../../../shared/widgets/app_section_header.dart';
 import '../../../shared/widgets/app_shell.dart';
+import '../../../shared/widgets/app_surface_card.dart';
 import '../../../shared/widgets/deck_list_tile.dart';
 import '../../../shared/widgets/primary_action_button.dart';
 import '../../../shared/models/deck_summary.dart';
@@ -77,62 +84,55 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           onPressed: () => context.push('/settings'),
           icon: const Icon(Icons.settings_outlined),
         ),
-        IconButton(
-          tooltip: 'Logout',
-          onPressed: () => ref.read(authControllerProvider.notifier).logout(),
-          icon: const Icon(Icons.logout_rounded),
-        ),
       ],
       child: RefreshIndicator(
         onRefresh: () async => ref.refresh(decksProvider.future),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: const Color(0xFF123F3A),
-                borderRadius: BorderRadius.circular(32),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Welcome back, ${authState.user?.displayName ?? 'student'}',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: Colors.white,
-                        ),
+            AppAnimatedReveal(
+              child: AppHeroPanel(
+                eyebrow: 'Welcome back',
+                title:
+                    'Ready to turn your next study document into a polished deck?',
+                description:
+                    'Hi ${authState.user?.displayName ?? 'student'}, keep your flow steady with fast generation, clean review sessions, and a workspace that stays focused.',
+                pills: [
+                  AppPill(
+                    icon: subscriptionState.isSubscribed
+                        ? Icons.workspace_premium_rounded
+                        : Icons.timelapse_rounded,
+                    label: subscriptionState.isSubscribed
+                        ? 'Premium active'
+                        : '${subscriptionState.freeGenerationsRemaining}/${subscriptionState.freeGenerationLimit} free generations left',
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    subscriptionState.isSubscribed
-                        ? 'Premium active. Unlimited deck generations and up to ${subscriptionState.maxCardsAllowed} cards.'
-                        : 'Free plan: ${subscriptionState.freeGenerationsRemaining} of ${subscriptionState.freeGenerationLimit} generations left, up to ${subscriptionState.maxCardsAllowed} cards.',
-                    style: const TextStyle(color: Colors.white70),
-                  ),
-                  const SizedBox(height: 20),
-                  PrimaryActionButton(
-                    label: 'Generate Flashcards',
-                    icon: Icons.auto_awesome_rounded,
-                    onPressed: () async {
-                      final canGenerate = await ref
-                          .read(subscriptionControllerProvider.notifier)
-                          .checkGenerationAccess();
-                      if (!context.mounted || canGenerate == null) {
-                        return;
-                      }
-                      context.push(canGenerate ? '/generate' : '/subscribe');
-                    },
+                  AppPill(
+                    icon: Icons.style_rounded,
+                    label: 'Up to ${subscriptionState.maxCardsAllowed} cards',
                   ),
                 ],
+                footer: PrimaryActionButton(
+                  label: 'Generate Flashcards',
+                  icon: Icons.auto_awesome_rounded,
+                  onPressed: () async {
+                    final canGenerate = await ref
+                        .read(subscriptionControllerProvider.notifier)
+                        .checkGenerationAccess();
+                    if (!context.mounted || canGenerate == null) {
+                      return;
+                    }
+                    context.push(canGenerate ? '/generate' : '/subscribe');
+                  },
+                ),
               ),
             ),
-            const SizedBox(height: 24),
-            Text(
-              'Your decks',
-              style: Theme.of(context).textTheme.titleLarge,
+            const SizedBox(height: AppSpacing.xl),
+            AppSectionHeader(
+              title: 'Your decks',
+              subtitle:
+                  'Jump back into recent study sessions or clean up old material with a swipe.',
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             decks.when(
               data: (items) {
                 final visibleItems = items
@@ -140,63 +140,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     .toList(growable: false);
 
                 if (visibleItems.isEmpty) {
-                  return const _EmptyDeckState();
+                  return const AppEmptyState(
+                    title: 'No decks yet',
+                    description:
+                        'Upload a class document and FlashMind will shape it into your first clean, review-ready deck.',
+                    icon: Icons.library_add_check_rounded,
+                  );
                 }
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: visibleItems
-                      .map(
-                        (deck) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: DeckListTile(
-                            deck: deck,
-                            onTap: () => context.push('/study/${deck.id}'),
-                            onDelete: () => _confirmDeleteDeck(deck),
-                            onDeleteDismissed: () => _handleDeckDeleted(deck),
-                          ),
+                  children: [
+                    for (var index = 0; index < visibleItems.length; index++)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                        child: DeckListTile(
+                          deck: visibleItems[index],
+                          onTap: () =>
+                              context.push('/study/${visibleItems[index].id}'),
+                          onDelete: () => _confirmDeleteDeck(visibleItems[index]),
+                          onDeleteDismissed: () =>
+                              _handleDeckDeleted(visibleItems[index]),
                         ),
-                      )
-                      .toList(),
+                      ),
+                  ],
                 );
               },
               loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.xxxl),
                 child: Center(child: CircularProgressIndicator()),
               ),
-              error: (error, stackTrace) => Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Text('Could not load decks: $error'),
-                ),
+              error: (error, stackTrace) => AppSurfaceCard(
+                child: Text('Could not load decks: $error'),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyDeckState extends StatelessWidget {
-  const _EmptyDeckState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'No decks yet',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Upload a file and create your first flashcard deck.',
-            ),
+            if (!subscriptionState.isSubscribed) ...[
+              const SizedBox(height: AppSpacing.sm),
+              AppSurfaceCard(
+                backgroundColor: context.tokens.surfaceSecondary,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Need more deck generations?',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      'Premium unlocks unlimited generations with a cleaner study rhythm.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    OutlinedButton(
+                      onPressed: () => context.push('/subscribe'),
+                      child: const Text('View plans'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/subscription/subscription_controller.dart';
 import '../core/theme/app_theme.dart';
+import '../core/theme/app_theme_mode.dart';
+import '../core/theme/theme_controller.dart';
 import 'router.dart';
 
 class FlashMindApp extends ConsumerWidget {
@@ -12,11 +14,16 @@ class FlashMindApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(subscriptionControllerProvider);
     final router = ref.watch(appRouterProvider);
+    final themeMode = ref.watch(themeControllerProvider);
 
     return MaterialApp.router(
       title: 'FlashMind',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: themeMode.materialMode,
+      themeAnimationCurve: Curves.easeOutCubic,
+      themeAnimationDuration: const Duration(milliseconds: 280),
       routerConfig: router,
     );
   }

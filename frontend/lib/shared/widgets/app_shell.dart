@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_theme_tokens.dart';
+
 class AppShell extends StatelessWidget {
   const AppShell({
     required this.child,
@@ -14,6 +16,8 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
     return Scaffold(
       appBar: title == null
           ? null
@@ -21,28 +25,72 @@ class AppShell extends StatelessWidget {
               title: Text(title!),
               actions: actions,
             ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFFF3F7EF),
-              Color(0xFFE8F0EC),
-              Color(0xFFF7F5F0),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: tokens.scaffoldGradient,
         ),
-        child: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: child,
+        child: Stack(
+          children: [
+            Positioned(
+              top: -80,
+              right: -60,
+              child: _AmbientGlow(
+                color: tokens.glowColor.withValues(
+                  alpha: Theme.of(context).brightness == Brightness.dark
+                      ? 0.18
+                      : 0.10,
+                ),
               ),
             ),
-          ),
+            Positioned(
+              bottom: -110,
+              left: -70,
+              child: _AmbientGlow(
+                color: context.colorScheme.secondary.withValues(
+                  alpha: Theme.of(context).brightness == Brightness.dark
+                      ? 0.12
+                      : 0.07,
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: child,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AmbientGlow extends StatelessWidget {
+  const _AmbientGlow({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Container(
+        width: 220,
+        height: 220,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: color,
+              blurRadius: 120,
+              spreadRadius: 20,
+            ),
+          ],
         ),
       ),
     );

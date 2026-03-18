@@ -20,6 +20,7 @@ dependencies:
   google_sign_in: ^6.2.2
   intl: ^0.20.2
   purchases_flutter: ^8.10.1
+  shared_preferences: ^2.3.3
   sign_in_with_apple: ^6.1.4
 
 dev_dependencies:

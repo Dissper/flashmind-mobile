@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_theme_tokens.dart';
 import '../../core/utils/formatters.dart';
+import '../models/flashcard_mode.dart';
 import '../models/deck_summary.dart';
+import 'app_pill.dart';
+import 'app_surface_card.dart';
 
 class DeckListTile extends StatelessWidget {
   const DeckListTile({
@@ -21,36 +25,69 @@ class DeckListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tile = Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(24),
+      color: Colors.transparent,
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      child: AppSurfaceCard(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                deck.title,
-                style: theme.textTheme.titleLarge,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _DeckTag(label: formatDeckDate(deck.createdAt)),
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: context.colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(AppRadii.md),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _DeckTag(label: deck.mode.label),
+                  child: Icon(
+                    deck.mode == FlashcardMode.flip
+                        ? Icons.flip_to_front_rounded
+                        : Icons.fact_check_rounded,
+                    color: context.colorScheme.onPrimaryContainer,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _DeckTag(label: '${deck.cardCount} cards'),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        deck.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        'Ready for a quick review session',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ],
-          ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: context.tokens.textMuted,
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                _DeckTag(label: formatDeckDate(deck.createdAt)),
+                _DeckTag(label: deck.mode.label),
+                _DeckTag(label: '${deck.cardCount} cards'),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -83,22 +120,8 @@ class _DeckTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      alignment: Alignment.center,
-      constraints: const BoxConstraints(minHeight: 40),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.labelLarge,
-        textAlign: TextAlign.center,
-      ),
+    return AppPill(
+      label: label,
     );
   }
 }
@@ -109,15 +132,16 @@ class _DeleteDeckBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final tokens = context.tokens;
 
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        gradient: LinearGradient(
           colors: [
-            Color(0xFFFFC9BF),
-            Color(0xFFFF7A6B),
-            Color(0xFFE53935),
+            tokens.destructiveSoft,
+            tokens.errorSoft,
+            tokens.destructiveStrong.withValues(alpha: 0.85),
           ],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
@@ -126,7 +150,7 @@ class _DeleteDeckBackground extends StatelessWidget {
       child: Align(
         alignment: Alignment.centerRight,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -136,7 +160,7 @@ class _DeleteDeckBackground extends StatelessWidget {
                 color: Colors.white,
                 size: 28,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: AppSpacing.xxs),
               Text(
                 'Delete',
                 style: textTheme.labelLarge?.copyWith(
